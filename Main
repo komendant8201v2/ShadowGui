@@ -1,10 +1,21 @@
 -- ShadowGui Module (ShadowGui.lua)
+local TweenService = game:GetService("TweenService")
 local ShadowGui = {}
 ShadowGui.__index = ShadowGui
 
+-- Funkcja pomocnicza do tworzenia tweenów
+local function Tween(obj, props, duration, easingStyle, easingDirection)
+    duration = duration or 0.5
+    easingStyle = easingStyle or Enum.EasingStyle.Quad
+    easingDirection = easingDirection or Enum.EasingDirection.Out
+    local tweenInfo = TweenInfo.new(duration, easingStyle, easingDirection)
+    local tween = TweenService:Create(obj, tweenInfo, props)
+    tween:Play()
+    return tween
+end
+
 --[[ 
-  Funkcja CreateWindow tworzy główny interfejs użytkownika. 
-  Obsługuje Loading Screen, konfigurację motywu, KeySystem, DiscordInvite oraz zapisywanie konfiguracji.
+  Funkcja CreateWindow tworzy główny interfejs użytkownika z animowanym wejściem, ulepszonym stylem oraz obsługą Loading Screen, KeySystem, DiscordInvite i powiadomień.
 --]]
 function ShadowGui:CreateWindow(config)
     config = config or {}
@@ -13,11 +24,13 @@ function ShadowGui:CreateWindow(config)
     local window = Instance.new("ScreenGui")
     window.Name = config.Name or "ShadowGuiWindow"
     window.Parent = game.CoreGui  -- lub PlayerGui w zależności od potrzeb
-
-    -- Ekran ładowania
+    
+    -- Ekran ładowania z animacją fade-in/out
     local loadingFrame = Instance.new("Frame", window)
     loadingFrame.Size = UDim2.new(1, 0, 1, 0)
     loadingFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    loadingFrame.BackgroundTransparency = 0
+    loadingFrame.ZIndex = 10
 
     local loadingTitle = Instance.new("TextLabel", loadingFrame)
     loadingTitle.Size = UDim2.new(1, 0, 0, 50)
@@ -26,6 +39,7 @@ function ShadowGui:CreateWindow(config)
     loadingTitle.Text = config.LoadingTitle or "Loading..."
     loadingTitle.TextColor3 = Color3.new(1,1,1)
     loadingTitle.TextScaled = true
+    loadingTitle.Font = Enum.Font.GothamBold
 
     local loadingSubtitle = Instance.new("TextLabel", loadingFrame)
     loadingSubtitle.Size = UDim2.new(1, 0, 0, 25)
@@ -34,23 +48,46 @@ function ShadowGui:CreateWindow(config)
     loadingSubtitle.Text = config.LoadingSubtitle or ""
     loadingSubtitle.TextColor3 = Color3.new(1,1,1)
     loadingSubtitle.TextScaled = true
+    loadingSubtitle.Font = Enum.Font.Gotham
 
-    -- Usuwamy ekran ładowania po krótkim czasie
     delay(2, function()
+         Tween(loadingFrame, {BackgroundTransparency = 1}, 0.5)
+         wait(0.6)
          loadingFrame:Destroy()
     end)
 
-    -- Główna ramka interfejsu
+    -- Główna ramka interfejsu z lekkim gradientem
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(0, 600, 0, 400)
     frame.Position = UDim2.new(0.5, -300, 0.5, -200)
     frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    frame.BorderSizePixel = 0
     frame.Parent = window
 
-    -- Pasek tytułowy z opcjonalną ikoną
+    local gradient = Instance.new("UIGradient", frame)
+    gradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 40, 40)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 30, 30))
+    })
+
+    -- Animacja wejścia okna
+    frame.Visible = false
+    delay(0.1, function()
+        frame.Visible = true
+        Tween(frame, {Position = UDim2.new(0.5, -300, 0.5, -200), BackgroundTransparency = 0}, 0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+    end)
+
+    -- Pasek tytułowy z ikoną i gradientem
     local topBar = Instance.new("Frame", frame)
     topBar.Size = UDim2.new(1, 0, 0, 50)
-    topBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    topBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    topBar.BorderSizePixel = 0
+
+    local topGradient = Instance.new("UIGradient", topBar)
+    topGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 60, 60)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 50, 50))
+    })
 
     if config.Icon and config.Icon ~= 0 then
         local icon = Instance.new("ImageLabel", topBar)
@@ -65,12 +102,13 @@ function ShadowGui:CreateWindow(config)
     end
 
     local titleLabel = Instance.new("TextLabel", topBar)
-    titleLabel.Size = UDim2.new(1, config.Icon and (config.Icon ~= 0 and -50 or 0) or 0, 1, 0)
+    titleLabel.Size = config.Icon and (config.Icon ~= 0 and UDim2.new(1, -50, 1, 0) or UDim2.new(1, 0, 1, 0)) or UDim2.new(1, 0, 1, 0)
     titleLabel.Position = config.Icon and (config.Icon ~= 0 and UDim2.new(0, 50, 0, 0) or UDim2.new(0, 0, 0, 0)) or UDim2.new(0,0,0,0)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = config.Name or "ShadowGui"
     titleLabel.TextColor3 = Color3.new(1,1,1)
     titleLabel.TextScaled = true
+    titleLabel.Font = Enum.Font.GothamBold
 
     -- Kontenery na zakładki i zawartość
     local tabContainer = Instance.new("Frame", frame)
@@ -87,7 +125,6 @@ function ShadowGui:CreateWindow(config)
     if config.KeySystem then
         local savedKey = _G[config.KeySettings.FileName]
         if not savedKey then
-            -- Tu należałoby otworzyć interfejs do wpisania klucza – dla przykładu symulujemy wpisanie
             local userInputKey = "Hello"  -- symulacja wpisania klucza
             local valid = false
             for _, key in ipairs(config.KeySettings.Key) do
@@ -110,15 +147,16 @@ function ShadowGui:CreateWindow(config)
         print("Dołącz do naszego Discorda za pomocą zaproszenia: " .. config.Discord.Invite)
     end
 
-    -- Funkcjonalność powiadomień
+    -- Funkcjonalność powiadomień z animacją slide-in/out
     local Notifications = {}
     function Notifications:Send(title, text, duration)
         duration = duration or 5
         local notification = Instance.new("Frame", window)
         notification.Size = UDim2.new(0, 300, 0, 50)
-        notification.Position = UDim2.new(1, -310, 0, 10)
+        notification.Position = UDim2.new(1, 310, 0, 10)  -- start poza ekranem
         notification.BackgroundColor3 = Color3.fromRGB(50,50,50)
         notification.BackgroundTransparency = 0.2
+        notification.BorderSizePixel = 0
 
         local nTitle = Instance.new("TextLabel", notification)
         nTitle.Size = UDim2.new(1,0,0,25)
@@ -126,6 +164,7 @@ function ShadowGui:CreateWindow(config)
         nTitle.Text = title
         nTitle.TextColor3 = Color3.new(1,1,1)
         nTitle.TextScaled = true
+        nTitle.Font = Enum.Font.GothamBold
 
         local nText = Instance.new("TextLabel", notification)
         nText.Size = UDim2.new(1,0,0,25)
@@ -134,13 +173,17 @@ function ShadowGui:CreateWindow(config)
         nText.Text = text
         nText.TextColor3 = Color3.new(1,1,1)
         nText.TextScaled = true
+        nText.Font = Enum.Font.Gotham
+
+        Tween(notification, {Position = UDim2.new(1, -310, 0, 10)}, 0.5)
 
         delay(duration, function()
+            Tween(notification, {Position = UDim2.new(1, 310, 0, 10)}, 0.5)
+            wait(0.6)
             notification:Destroy()
         end)
     end
 
-    -- Zbiór funkcji i danych interfejsu
     local guiObject = {
         Window = window,
         Frame = frame,
@@ -156,25 +199,27 @@ function ShadowGui:CreateWindow(config)
     return guiObject
 end
 
--- Dodawanie zakładki (Tab) – tworzy przycisk i kontener na zawartość
+-- Dodawanie zakładki (Tab) – tworzy przycisk z animacją oraz kontener na zawartość
 function ShadowGui:AddTab(config)
     config = config or {}
     local tabName = config.Name or "Tab"
     
-    -- Utwórz przycisk zakładki
     local tabButton = Instance.new("TextButton")
     tabButton.Size = UDim2.new(0, self.TabButtonWidth, 1, 0)
     tabButton.BackgroundColor3 = Color3.fromRGB(50,50,50)
     tabButton.Text = tabName
     tabButton.TextColor3 = Color3.new(1,1,1)
-    tabButton.Font = Enum.Font.SourceSans
+    tabButton.Font = Enum.Font.Gotham
     tabButton.TextSize = 20
+    tabButton.BorderSizePixel = 0
     tabButton.Parent = self.TabContainer
 
     local tabCount = #self.Tabs
     tabButton.Position = UDim2.new(0, tabCount * self.TabButtonWidth, 0, 0)
+    
+    -- Animacja przycisku zakładki
+    Tween(tabButton, {BackgroundColor3 = Color3.fromRGB(55,55,55)}, 0.3)
 
-    -- Utwórz kontener na zawartość zakładki
     local tabContent = Instance.new("Frame", self.ContentContainer)
     tabContent.Size = UDim2.new(1, 0, 1, 0)
     tabContent.BackgroundTransparency = 1
@@ -190,40 +235,45 @@ function ShadowGui:AddTab(config)
     table.insert(self.Tabs, tabData)
 
     tabButton.MouseButton1Click:Connect(function()
-        -- Ukryj zawartość poprzedniej zakładki
         for _, tab in ipairs(self.Tabs) do
+            Tween(tab.Content, {BackgroundTransparency = 1}, 0.3)
             tab.Content.Visible = false
-            tab.Button.BackgroundColor3 = Color3.fromRGB(50,50,50)
+            Tween(tab.Button, {BackgroundColor3 = Color3.fromRGB(50,50,50)}, 0.3)
         end
         tabContent.Visible = true
-        tabButton.BackgroundColor3 = Color3.fromRGB(70,70,70)
+        Tween(tabContent, {BackgroundTransparency = 0}, 0.3)
+        Tween(tabButton, {BackgroundColor3 = Color3.fromRGB(70,70,70)}, 0.3)
         self.ActiveTab = tabData
     end)
 
-    -- Jeśli to pierwsza zakładka, aktywuj ją
     if #self.Tabs == 1 then
         tabContent.Visible = true
-        tabButton.BackgroundColor3 = Color3.fromRGB(70,70,70)
+        Tween(tabContent, {BackgroundTransparency = 0}, 0.3)
+        Tween(tabButton, {BackgroundColor3 = Color3.fromRGB(70,70,70)}, 0.3)
         self.ActiveTab = tabData
     end
 
     return tabData
 end
 
--- Dodawanie przycisku do konkretnej zakładki
+-- Dodawanie przycisku do zakładki z animacją przy kliknięciu
 function ShadowGui:AddButton(tabData, config, callback)
     config = config or {}
     local button = Instance.new("TextButton")
     button.Size = UDim2.new(0, config.SizeX or 150, 0, config.SizeY or 40)
     button.Position = UDim2.new(0, 10, 0, tabData.NextElementY)
-    button.BackgroundColor3 = config.BackgroundColor or Color3.fromRGB(50,50,50)
+    button.BackgroundColor3 = config.BackgroundColor or Color3.fromRGB(60,60,60)
     button.Text = config.Text or "Button"
     button.TextColor3 = config.TextColor or Color3.new(1,1,1)
-    button.Font = Enum.Font.SourceSans
+    button.Font = Enum.Font.Gotham
     button.TextSize = 20
+    button.BorderSizePixel = 0
     button.Parent = tabData.Content
 
     button.MouseButton1Click:Connect(function()
+        Tween(button, {BackgroundColor3 = Color3.fromRGB(80,80,80)}, 0.1)
+        wait(0.1)
+        Tween(button, {BackgroundColor3 = config.BackgroundColor or Color3.fromRGB(60,60,60)}, 0.1)
         if callback then callback() end
     end)
     
@@ -231,22 +281,26 @@ function ShadowGui:AddButton(tabData, config, callback)
     table.insert(tabData.Elements, button)
 end
 
--- Dodawanie przełącznika (Toggle) do zakładki
+-- Dodawanie przełącznika (Toggle) do zakładki z animacją
 function ShadowGui:AddToggle(tabData, config, callback)
     config = config or {}
     local toggle = Instance.new("TextButton")
     toggle.Size = UDim2.new(0, config.SizeX or 150, 0, config.SizeY or 40)
     toggle.Position = UDim2.new(0, 10, 0, tabData.NextElementY)
-    toggle.BackgroundColor3 = config.BackgroundColor or Color3.fromRGB(50,50,50)
+    toggle.BackgroundColor3 = config.BackgroundColor or Color3.fromRGB(60,60,60)
     local state = false
     toggle.Text = (config.Text or "Toggle") .. " [" .. tostring(state) .. "]"
     toggle.TextColor3 = config.TextColor or Color3.new(1,1,1)
-    toggle.Font = Enum.Font.SourceSans
+    toggle.Font = Enum.Font.Gotham
     toggle.TextSize = 20
+    toggle.BorderSizePixel = 0
     toggle.Parent = tabData.Content
 
     toggle.MouseButton1Click:Connect(function()
         state = not state
+        Tween(toggle, {BackgroundColor3 = Color3.fromRGB(80,80,80)}, 0.1)
+        wait(0.1)
+        Tween(toggle, {BackgroundColor3 = config.BackgroundColor or Color3.fromRGB(60,60,60)}, 0.1)
         toggle.Text = (config.Text or "Toggle") .. " [" .. tostring(state) .. "]"
         if callback then callback(state) end
     end)
