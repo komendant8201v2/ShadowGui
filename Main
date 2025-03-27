@@ -1,0 +1,258 @@
+-- ShadowGui Module (ShadowGui.lua)
+local ShadowGui = {}
+ShadowGui.__index = ShadowGui
+
+--[[ 
+  Funkcja CreateWindow tworzy główny interfejs użytkownika. 
+  Obsługuje Loading Screen, konfigurację motywu, KeySystem, DiscordInvite oraz zapisywanie konfiguracji.
+--]]
+function ShadowGui:CreateWindow(config)
+    config = config or {}
+    
+    -- Utwórz ScreenGui i ustaw podstawowe właściwości
+    local window = Instance.new("ScreenGui")
+    window.Name = config.Name or "ShadowGuiWindow"
+    window.Parent = game.CoreGui  -- lub PlayerGui w zależności od potrzeb
+
+    -- Ekran ładowania
+    local loadingFrame = Instance.new("Frame", window)
+    loadingFrame.Size = UDim2.new(1, 0, 1, 0)
+    loadingFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+
+    local loadingTitle = Instance.new("TextLabel", loadingFrame)
+    loadingTitle.Size = UDim2.new(1, 0, 0, 50)
+    loadingTitle.Position = UDim2.new(0, 0, 0.5, -40)
+    loadingTitle.BackgroundTransparency = 1
+    loadingTitle.Text = config.LoadingTitle or "Loading..."
+    loadingTitle.TextColor3 = Color3.new(1,1,1)
+    loadingTitle.TextScaled = true
+
+    local loadingSubtitle = Instance.new("TextLabel", loadingFrame)
+    loadingSubtitle.Size = UDim2.new(1, 0, 0, 25)
+    loadingSubtitle.Position = UDim2.new(0, 0, 0.5, 10)
+    loadingSubtitle.BackgroundTransparency = 1
+    loadingSubtitle.Text = config.LoadingSubtitle or ""
+    loadingSubtitle.TextColor3 = Color3.new(1,1,1)
+    loadingSubtitle.TextScaled = true
+
+    -- Usuwamy ekran ładowania po krótkim czasie
+    delay(2, function()
+         loadingFrame:Destroy()
+    end)
+
+    -- Główna ramka interfejsu
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 600, 0, 400)
+    frame.Position = UDim2.new(0.5, -300, 0.5, -200)
+    frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    frame.Parent = window
+
+    -- Pasek tytułowy z opcjonalną ikoną
+    local topBar = Instance.new("Frame", frame)
+    topBar.Size = UDim2.new(1, 0, 0, 50)
+    topBar.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+
+    if config.Icon and config.Icon ~= 0 then
+        local icon = Instance.new("ImageLabel", topBar)
+        icon.Size = UDim2.new(0, 40, 0, 40)
+        icon.Position = UDim2.new(0, 5, 0, 5)
+        if type(config.Icon) == "number" then
+            icon.Image = "rbxassetid://"..tostring(config.Icon)
+        else
+            icon.Image = config.Icon
+        end
+        icon.BackgroundTransparency = 1
+    end
+
+    local titleLabel = Instance.new("TextLabel", topBar)
+    titleLabel.Size = UDim2.new(1, config.Icon and (config.Icon ~= 0 and -50 or 0) or 0, 1, 0)
+    titleLabel.Position = config.Icon and (config.Icon ~= 0 and UDim2.new(0, 50, 0, 0) or UDim2.new(0, 0, 0, 0)) or UDim2.new(0,0,0,0)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = config.Name or "ShadowGui"
+    titleLabel.TextColor3 = Color3.new(1,1,1)
+    titleLabel.TextScaled = true
+
+    -- Kontenery na zakładki i zawartość
+    local tabContainer = Instance.new("Frame", frame)
+    tabContainer.Size = UDim2.new(1, 0, 0, 30)
+    tabContainer.Position = UDim2.new(0, 0, 0, 50)
+    tabContainer.BackgroundTransparency = 1
+
+    local contentContainer = Instance.new("Frame", frame)
+    contentContainer.Size = UDim2.new(1, 0, 1, -80)
+    contentContainer.Position = UDim2.new(0, 0, 0, 80)
+    contentContainer.BackgroundTransparency = 1
+
+    -- Obsługa KeySystem – symulacja, gdyż dostęp do systemu plików jest ograniczony
+    if config.KeySystem then
+        local savedKey = _G[config.KeySettings.FileName]
+        if not savedKey then
+            -- Tu należałoby otworzyć interfejs do wpisania klucza – dla przykładu symulujemy wpisanie
+            local userInputKey = "Hello"  -- symulacja wpisania klucza
+            local valid = false
+            for _, key in ipairs(config.KeySettings.Key) do
+                if userInputKey == key then
+                    valid = true
+                    break
+                end
+            end
+            if not valid then
+                error("Podano niepoprawny klucz!")
+            end
+            if config.KeySettings.SaveKey then
+                _G[config.KeySettings.FileName] = userInputKey
+            end
+        end
+    end
+
+    -- Obsługa DiscordInvite – symulacja wyświetlenia informacji
+    if config.Discord and config.Discord.Enabled then
+        print("Dołącz do naszego Discorda za pomocą zaproszenia: " .. config.Discord.Invite)
+    end
+
+    -- Funkcjonalność powiadomień
+    local Notifications = {}
+    function Notifications:Send(title, text, duration)
+        duration = duration or 5
+        local notification = Instance.new("Frame", window)
+        notification.Size = UDim2.new(0, 300, 0, 50)
+        notification.Position = UDim2.new(1, -310, 0, 10)
+        notification.BackgroundColor3 = Color3.fromRGB(50,50,50)
+        notification.BackgroundTransparency = 0.2
+
+        local nTitle = Instance.new("TextLabel", notification)
+        nTitle.Size = UDim2.new(1,0,0,25)
+        nTitle.BackgroundTransparency = 1
+        nTitle.Text = title
+        nTitle.TextColor3 = Color3.new(1,1,1)
+        nTitle.TextScaled = true
+
+        local nText = Instance.new("TextLabel", notification)
+        nText.Size = UDim2.new(1,0,0,25)
+        nText.Position = UDim2.new(0,0,0,25)
+        nText.BackgroundTransparency = 1
+        nText.Text = text
+        nText.TextColor3 = Color3.new(1,1,1)
+        nText.TextScaled = true
+
+        delay(duration, function()
+            notification:Destroy()
+        end)
+    end
+
+    -- Zbiór funkcji i danych interfejsu
+    local guiObject = {
+        Window = window,
+        Frame = frame,
+        TabContainer = tabContainer,
+        ContentContainer = contentContainer,
+        Notifications = Notifications,
+        Tabs = {},
+        ActiveTab = nil,
+        TabButtonWidth = 100,  -- domyślna szerokość przycisku zakładki
+        Config = config
+    }
+    setmetatable(guiObject, ShadowGui)
+    return guiObject
+end
+
+-- Dodawanie zakładki (Tab) – tworzy przycisk i kontener na zawartość
+function ShadowGui:AddTab(config)
+    config = config or {}
+    local tabName = config.Name or "Tab"
+    
+    -- Utwórz przycisk zakładki
+    local tabButton = Instance.new("TextButton")
+    tabButton.Size = UDim2.new(0, self.TabButtonWidth, 1, 0)
+    tabButton.BackgroundColor3 = Color3.fromRGB(50,50,50)
+    tabButton.Text = tabName
+    tabButton.TextColor3 = Color3.new(1,1,1)
+    tabButton.Font = Enum.Font.SourceSans
+    tabButton.TextSize = 20
+    tabButton.Parent = self.TabContainer
+
+    local tabCount = #self.Tabs
+    tabButton.Position = UDim2.new(0, tabCount * self.TabButtonWidth, 0, 0)
+
+    -- Utwórz kontener na zawartość zakładki
+    local tabContent = Instance.new("Frame", self.ContentContainer)
+    tabContent.Size = UDim2.new(1, 0, 1, 0)
+    tabContent.BackgroundTransparency = 1
+    tabContent.Visible = false
+
+    local tabData = {
+        Name = tabName,
+        Button = tabButton,
+        Content = tabContent,
+        Elements = {},
+        NextElementY = 10
+    }
+    table.insert(self.Tabs, tabData)
+
+    tabButton.MouseButton1Click:Connect(function()
+        -- Ukryj zawartość poprzedniej zakładki
+        for _, tab in ipairs(self.Tabs) do
+            tab.Content.Visible = false
+            tab.Button.BackgroundColor3 = Color3.fromRGB(50,50,50)
+        end
+        tabContent.Visible = true
+        tabButton.BackgroundColor3 = Color3.fromRGB(70,70,70)
+        self.ActiveTab = tabData
+    end)
+
+    -- Jeśli to pierwsza zakładka, aktywuj ją
+    if #self.Tabs == 1 then
+        tabContent.Visible = true
+        tabButton.BackgroundColor3 = Color3.fromRGB(70,70,70)
+        self.ActiveTab = tabData
+    end
+
+    return tabData
+end
+
+-- Dodawanie przycisku do konkretnej zakładki
+function ShadowGui:AddButton(tabData, config, callback)
+    config = config or {}
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0, config.SizeX or 150, 0, config.SizeY or 40)
+    button.Position = UDim2.new(0, 10, 0, tabData.NextElementY)
+    button.BackgroundColor3 = config.BackgroundColor or Color3.fromRGB(50,50,50)
+    button.Text = config.Text or "Button"
+    button.TextColor3 = config.TextColor or Color3.new(1,1,1)
+    button.Font = Enum.Font.SourceSans
+    button.TextSize = 20
+    button.Parent = tabData.Content
+
+    button.MouseButton1Click:Connect(function()
+        if callback then callback() end
+    end)
+    
+    tabData.NextElementY = tabData.NextElementY + (config.SizeY or 40) + 10
+    table.insert(tabData.Elements, button)
+end
+
+-- Dodawanie przełącznika (Toggle) do zakładki
+function ShadowGui:AddToggle(tabData, config, callback)
+    config = config or {}
+    local toggle = Instance.new("TextButton")
+    toggle.Size = UDim2.new(0, config.SizeX or 150, 0, config.SizeY or 40)
+    toggle.Position = UDim2.new(0, 10, 0, tabData.NextElementY)
+    toggle.BackgroundColor3 = config.BackgroundColor or Color3.fromRGB(50,50,50)
+    local state = false
+    toggle.Text = (config.Text or "Toggle") .. " [" .. tostring(state) .. "]"
+    toggle.TextColor3 = config.TextColor or Color3.new(1,1,1)
+    toggle.Font = Enum.Font.SourceSans
+    toggle.TextSize = 20
+    toggle.Parent = tabData.Content
+
+    toggle.MouseButton1Click:Connect(function()
+        state = not state
+        toggle.Text = (config.Text or "Toggle") .. " [" .. tostring(state) .. "]"
+        if callback then callback(state) end
+    end)
+    
+    tabData.NextElementY = tabData.NextElementY + (config.SizeY or 40) + 10
+    table.insert(tabData.Elements, toggle)
+end
+
+return ShadowGui
