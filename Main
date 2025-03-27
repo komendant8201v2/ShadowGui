@@ -419,4 +419,10 @@ function ShadowGui:AddToggle(tabData, config, callback)
     table.insert(tabData.Elements, toggle)
 end
 
+-- Na początku CreateWindow możesz usunąć wcześniejsze instancje o nazwie "ShadowGuiWindow"
+local oldGui = game.CoreGui:FindFirstChild(config.Name or "ShadowGuiWindow")
+if oldGui then
+    oldGui:Destroy()
+end
+
 return ShadowGui
