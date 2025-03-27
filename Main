@@ -1,5 +1,7 @@
 -- ShadowGui Module (ShadowGui.lua)
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local ShadowGui = {}
 ShadowGui.__index = ShadowGui
 
@@ -14,23 +16,62 @@ local function Tween(obj, props, duration, easingStyle, easingDirection)
     return tween
 end
 
---[[ 
-  Funkcja CreateWindow tworzy główny interfejs użytkownika z animowanym wejściem, ulepszonym stylem oraz obsługą Loading Screen, KeySystem, DiscordInvite i powiadomień.
---]]
+-- Funkcja dodająca UICorner do obiektu
+local function AddUICorner(obj, cornerRadius)
+    local uiCorner = Instance.new("UICorner", obj)
+    uiCorner.CornerRadius = UDim.new(0, cornerRadius or 8)
+end
+
+-- Funkcja umożliwiająca przeciąganie obiektu
+local function MakeDraggable(frame)
+    local dragging, dragInput, dragStart, startPos
+    local function update(input)
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    RunService.RenderStepped:Connect(function()
+        if dragging and dragInput then
+            update(dragInput)
+        end
+    end)
+end
+
+-- Główna funkcja tworząca okno z animacjami, UICorner oraz możliwością przeciągania
 function ShadowGui:CreateWindow(config)
     config = config or {}
     
-    -- Utwórz ScreenGui i ustaw podstawowe właściwości
     local window = Instance.new("ScreenGui")
     window.Name = config.Name or "ShadowGuiWindow"
-    window.Parent = game.CoreGui  -- lub PlayerGui w zależności od potrzeb
-    
+    window.Parent = game.CoreGui  -- lub PlayerGui
+
     -- Ekran ładowania z animacją fade-in/out
     local loadingFrame = Instance.new("Frame", window)
     loadingFrame.Size = UDim2.new(1, 0, 1, 0)
     loadingFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     loadingFrame.BackgroundTransparency = 0
     loadingFrame.ZIndex = 10
+    AddUICorner(loadingFrame, 12)
 
     local loadingTitle = Instance.new("TextLabel", loadingFrame)
     loadingTitle.Size = UDim2.new(1, 0, 0, 50)
@@ -56,13 +97,14 @@ function ShadowGui:CreateWindow(config)
          loadingFrame:Destroy()
     end)
 
-    -- Główna ramka interfejsu z lekkim gradientem
+    -- Główna ramka interfejsu z gradientem i UICorner
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(0, 600, 0, 400)
     frame.Position = UDim2.new(0.5, -300, 0.5, -200)
     frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     frame.BorderSizePixel = 0
     frame.Parent = window
+    AddUICorner(frame, 12)
 
     local gradient = Instance.new("UIGradient", frame)
     gradient.Color = ColorSequence.new({
@@ -70,18 +112,15 @@ function ShadowGui:CreateWindow(config)
         ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 30, 30))
     })
 
-    -- Animacja wejścia okna
-    frame.Visible = false
-    delay(0.1, function()
-        frame.Visible = true
-        Tween(frame, {Position = UDim2.new(0.5, -300, 0.5, -200), BackgroundTransparency = 0}, 0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-    end)
+    -- Ustawienie przeciągania głównego okna
+    MakeDraggable(frame)
 
-    -- Pasek tytułowy z ikoną i gradientem
+    -- Pasek tytułowy z ikoną, gradientem oraz UICorner
     local topBar = Instance.new("Frame", frame)
     topBar.Size = UDim2.new(1, 0, 0, 50)
     topBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     topBar.BorderSizePixel = 0
+    AddUICorner(topBar, 12)
 
     local topGradient = Instance.new("UIGradient", topBar)
     topGradient.Color = ColorSequence.new({
@@ -99,6 +138,7 @@ function ShadowGui:CreateWindow(config)
             icon.Image = config.Icon
         end
         icon.BackgroundTransparency = 1
+        AddUICorner(icon, 8)
     end
 
     local titleLabel = Instance.new("TextLabel", topBar)
@@ -121,7 +161,7 @@ function ShadowGui:CreateWindow(config)
     contentContainer.Position = UDim2.new(0, 0, 0, 80)
     contentContainer.BackgroundTransparency = 1
 
-    -- Obsługa KeySystem – symulacja, gdyż dostęp do systemu plików jest ograniczony
+    -- Obsługa KeySystem (symulacja)
     if config.KeySystem then
         local savedKey = _G[config.KeySettings.FileName]
         if not savedKey then
@@ -142,21 +182,22 @@ function ShadowGui:CreateWindow(config)
         end
     end
 
-    -- Obsługa DiscordInvite – symulacja wyświetlenia informacji
+    -- Obsługa DiscordInvite – symulacja
     if config.Discord and config.Discord.Enabled then
         print("Dołącz do naszego Discorda za pomocą zaproszenia: " .. config.Discord.Invite)
     end
 
-    -- Funkcjonalność powiadomień z animacją slide-in/out
+    -- Funkcjonalność powiadomień z animacją slide-in/out i UICorner
     local Notifications = {}
     function Notifications:Send(title, text, duration)
         duration = duration or 5
         local notification = Instance.new("Frame", window)
         notification.Size = UDim2.new(0, 300, 0, 50)
-        notification.Position = UDim2.new(1, 310, 0, 10)  -- start poza ekranem
+        notification.Position = UDim2.new(1, 310, 0, 10)
         notification.BackgroundColor3 = Color3.fromRGB(50,50,50)
         notification.BackgroundTransparency = 0.2
         notification.BorderSizePixel = 0
+        AddUICorner(notification, 8)
 
         local nTitle = Instance.new("TextLabel", notification)
         nTitle.Size = UDim2.new(1,0,0,25)
@@ -199,7 +240,7 @@ function ShadowGui:CreateWindow(config)
     return guiObject
 end
 
--- Dodawanie zakładki (Tab) – tworzy przycisk z animacją oraz kontener na zawartość
+-- Dodawanie zakładki (Tab) z animacją i UICorner
 function ShadowGui:AddTab(config)
     config = config or {}
     local tabName = config.Name or "Tab"
@@ -213,17 +254,18 @@ function ShadowGui:AddTab(config)
     tabButton.TextSize = 20
     tabButton.BorderSizePixel = 0
     tabButton.Parent = self.TabContainer
+    AddUICorner(tabButton, 6)
 
     local tabCount = #self.Tabs
     tabButton.Position = UDim2.new(0, tabCount * self.TabButtonWidth, 0, 0)
     
-    -- Animacja przycisku zakładki
     Tween(tabButton, {BackgroundColor3 = Color3.fromRGB(55,55,55)}, 0.3)
 
     local tabContent = Instance.new("Frame", self.ContentContainer)
     tabContent.Size = UDim2.new(1, 0, 1, 0)
     tabContent.BackgroundTransparency = 1
     tabContent.Visible = false
+    AddUICorner(tabContent, 8)
 
     local tabData = {
         Name = tabName,
@@ -256,7 +298,7 @@ function ShadowGui:AddTab(config)
     return tabData
 end
 
--- Dodawanie przycisku do zakładki z animacją przy kliknięciu
+-- Dodawanie przycisku do zakładki z animacją i UICorner
 function ShadowGui:AddButton(tabData, config, callback)
     config = config or {}
     local button = Instance.new("TextButton")
@@ -269,6 +311,7 @@ function ShadowGui:AddButton(tabData, config, callback)
     button.TextSize = 20
     button.BorderSizePixel = 0
     button.Parent = tabData.Content
+    AddUICorner(button, 6)
 
     button.MouseButton1Click:Connect(function()
         Tween(button, {BackgroundColor3 = Color3.fromRGB(80,80,80)}, 0.1)
@@ -281,7 +324,7 @@ function ShadowGui:AddButton(tabData, config, callback)
     table.insert(tabData.Elements, button)
 end
 
--- Dodawanie przełącznika (Toggle) do zakładki z animacją
+-- Dodawanie przełącznika (Toggle) do zakładki z animacją i UICorner
 function ShadowGui:AddToggle(tabData, config, callback)
     config = config or {}
     local toggle = Instance.new("TextButton")
@@ -295,6 +338,7 @@ function ShadowGui:AddToggle(tabData, config, callback)
     toggle.TextSize = 20
     toggle.BorderSizePixel = 0
     toggle.Parent = tabData.Content
+    AddUICorner(toggle, 6)
 
     toggle.MouseButton1Click:Connect(function()
         state = not state
