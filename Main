@@ -5,7 +5,11 @@ local RunService = game:GetService("RunService")
 local ShadowGui = {}
 ShadowGui.__index = ShadowGui
 
--- Funkcja pomocnicza do tworzenia tweenów
+---------------------------
+-- FUNKCJE POMOCNICZE --
+---------------------------
+
+-- Tween helper
 local function Tween(obj, props, duration, easingStyle, easingDirection)
     duration = duration or 0.5
     easingStyle = easingStyle or Enum.EasingStyle.Quad
@@ -16,13 +20,13 @@ local function Tween(obj, props, duration, easingStyle, easingDirection)
     return tween
 end
 
--- Funkcja dodająca UICorner do obiektu
+-- Dodaje UICorner do obiektu
 local function AddUICorner(obj, cornerRadius)
     local uiCorner = Instance.new("UICorner", obj)
     uiCorner.CornerRadius = UDim.new(0, cornerRadius or 8)
 end
 
--- Funkcja umożliwiająca przeciąganie obiektu
+-- Umożliwia przeciąganie obiektu
 local function MakeDraggable(frame)
     local dragging, dragInput, dragStart, startPos
     local function update(input)
@@ -57,7 +61,109 @@ local function MakeDraggable(frame)
     end)
 end
 
--- Główna funkcja tworząca okno z animacjami, UICorner oraz możliwością przeciągania
+-- Funkcja wyświetlająca ekran powitalny (Splash) z napisem "ShadowGui"
+local function ShowSplash(parent)
+    local splash = Instance.new("Frame", parent)
+    splash.Size = UDim2.new(1, 0, 1, 0)
+    splash.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    splash.BackgroundTransparency = 0
+    splash.ZIndex = 10
+    AddUICorner(splash, 12)
+
+    local splashLabel = Instance.new("TextLabel", splash)
+    splashLabel.Size = UDim2.new(1, 0, 0, 100)
+    splashLabel.Position = UDim2.new(0, 0, 0.5, -50)
+    splashLabel.BackgroundTransparency = 1
+    splashLabel.Text = "ShadowGui"
+    splashLabel.TextColor3 = Color3.new(1,1,1)
+    splashLabel.TextScaled = true
+    splashLabel.Font = Enum.Font.GothamBold
+
+    -- Efekt pojawiania się
+    Tween(splashLabel, {TextTransparency = 0}, 0.5)
+    wait(1.5)
+    Tween(splash, {BackgroundTransparency = 1}, 0.75)
+    wait(0.8)
+    splash:Destroy()
+end
+
+-- Funkcja wyświetlająca okno z systemem klucza, jeżeli KeySystem = true.
+-- Funkcja blokuje działanie i zwraca true po poprawnej walidacji.
+local function ShowKeySystem(parent, keySettings)
+    local keyPrompt = Instance.new("Frame", parent)
+    keyPrompt.Size = UDim2.new(0, 300, 0, 150)
+    keyPrompt.Position = UDim2.new(0.5, -150, 0.5, -75)
+    keyPrompt.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    keyPrompt.BorderSizePixel = 0
+    keyPrompt.ZIndex = 11
+    AddUICorner(keyPrompt, 12)
+
+    local title = Instance.new("TextLabel", keyPrompt)
+    title.Size = UDim2.new(1, 0, 0, 40)
+    title.BackgroundTransparency = 1
+    title.Text = keySettings.Title or "Key System"
+    title.TextColor3 = Color3.new(1,1,1)
+    title.Font = Enum.Font.GothamBold
+    title.TextScaled = true
+
+    local subtitle = Instance.new("TextLabel", keyPrompt)
+    subtitle.Size = UDim2.new(1, 0, 0, 20)
+    subtitle.Position = UDim2.new(0, 0, 0, 40)
+    subtitle.BackgroundTransparency = 1
+    subtitle.Text = keySettings.Subtitle or "Enter your key"
+    subtitle.TextColor3 = Color3.new(1,1,1)
+    subtitle.Font = Enum.Font.Gotham
+    subtitle.TextScaled = true
+
+    local keyBox = Instance.new("TextBox", keyPrompt)
+    keyBox.Size = UDim2.new(0, 200, 0, 30)
+    keyBox.Position = UDim2.new(0.5, -100, 0, 70)
+    keyBox.PlaceholderText = "Enter key..."
+    keyBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    keyBox.TextColor3 = Color3.new(1,1,1)
+    keyBox.Font = Enum.Font.Gotham
+    keyBox.TextScaled = true
+    AddUICorner(keyBox, 6)
+
+    local submit = Instance.new("TextButton", keyPrompt)
+    submit.Size = UDim2.new(0, 100, 0, 30)
+    submit.Position = UDim2.new(0.5, -50, 0, 110)
+    submit.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    submit.Text = "Submit"
+    submit.TextColor3 = Color3.new(1,1,1)
+    submit.Font = Enum.Font.GothamBold
+    submit.TextScaled = true
+    AddUICorner(submit, 6)
+
+    local validated = false
+    submit.MouseButton1Click:Connect(function()
+        local inputKey = keyBox.Text or ""
+        for _, validKey in ipairs(keySettings.Key or {}) do
+            if inputKey == validKey then
+                validated = true
+                break
+            end
+        end
+        if validated then
+            Tween(keyPrompt, {BackgroundTransparency = 1}, 0.5)
+            wait(0.6)
+            keyPrompt:Destroy()
+        else
+            -- Opcjonalnie można dodać komunikat o błędzie
+            keyBox.Text = ""
+            keyBox.PlaceholderText = "Invalid key, try again!"
+        end
+    end)
+
+    -- Pętla oczekująca na walidację
+    repeat wait() until validated
+    return true
+end
+
+---------------------------
+-- GŁÓWNA FUNKCJA GUI --
+---------------------------
+
 function ShadowGui:CreateWindow(config)
     config = config or {}
     
@@ -65,39 +171,15 @@ function ShadowGui:CreateWindow(config)
     window.Name = config.Name or "ShadowGuiWindow"
     window.Parent = game.CoreGui  -- lub PlayerGui
 
-    -- Ekran ładowania z animacją fade-in/out
-    local loadingFrame = Instance.new("Frame", window)
-    loadingFrame.Size = UDim2.new(1, 0, 1, 0)
-    loadingFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    loadingFrame.BackgroundTransparency = 0
-    loadingFrame.ZIndex = 10
-    AddUICorner(loadingFrame, 12)
+    -- Wyświetl splash screen
+    ShowSplash(window)
 
-    local loadingTitle = Instance.new("TextLabel", loadingFrame)
-    loadingTitle.Size = UDim2.new(1, 0, 0, 50)
-    loadingTitle.Position = UDim2.new(0, 0, 0.5, -40)
-    loadingTitle.BackgroundTransparency = 1
-    loadingTitle.Text = config.LoadingTitle or "Loading..."
-    loadingTitle.TextColor3 = Color3.new(1,1,1)
-    loadingTitle.TextScaled = true
-    loadingTitle.Font = Enum.Font.GothamBold
+    -- Jeśli KeySystem = true, wyświetl okno klucza
+    if config.KeySystem then
+        ShowKeySystem(window, config.KeySettings or {})
+    end
 
-    local loadingSubtitle = Instance.new("TextLabel", loadingFrame)
-    loadingSubtitle.Size = UDim2.new(1, 0, 0, 25)
-    loadingSubtitle.Position = UDim2.new(0, 0, 0.5, 10)
-    loadingSubtitle.BackgroundTransparency = 1
-    loadingSubtitle.Text = config.LoadingSubtitle or ""
-    loadingSubtitle.TextColor3 = Color3.new(1,1,1)
-    loadingSubtitle.TextScaled = true
-    loadingSubtitle.Font = Enum.Font.Gotham
-
-    delay(2, function()
-         Tween(loadingFrame, {BackgroundTransparency = 1}, 0.5)
-         wait(0.6)
-         loadingFrame:Destroy()
-    end)
-
-    -- Główna ramka interfejsu z gradientem i UICorner
+    -- Główna ramka interfejsu z animowanym wejściem
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(0, 600, 0, 400)
     frame.Position = UDim2.new(0.5, -300, 0.5, -200)
@@ -161,32 +243,6 @@ function ShadowGui:CreateWindow(config)
     contentContainer.Position = UDim2.new(0, 0, 0, 80)
     contentContainer.BackgroundTransparency = 1
 
-    -- Obsługa KeySystem (symulacja)
-    if config.KeySystem then
-        local savedKey = _G[config.KeySettings.FileName]
-        if not savedKey then
-            local userInputKey = "Hello"  -- symulacja wpisania klucza
-            local valid = false
-            for _, key in ipairs(config.KeySettings.Key) do
-                if userInputKey == key then
-                    valid = true
-                    break
-                end
-            end
-            if not valid then
-                error("Podano niepoprawny klucz!")
-            end
-            if config.KeySettings.SaveKey then
-                _G[config.KeySettings.FileName] = userInputKey
-            end
-        end
-    end
-
-    -- Obsługa DiscordInvite – symulacja
-    if config.Discord and config.Discord.Enabled then
-        print("Dołącz do naszego Discorda za pomocą zaproszenia: " .. config.Discord.Invite)
-    end
-
     -- Funkcjonalność powiadomień z animacją slide-in/out i UICorner
     local Notifications = {}
     function Notifications:Send(title, text, duration)
@@ -239,6 +295,10 @@ function ShadowGui:CreateWindow(config)
     setmetatable(guiObject, ShadowGui)
     return guiObject
 end
+
+---------------------------
+-- FUNKCJE ELEMENTÓW --
+---------------------------
 
 -- Dodawanie zakładki (Tab) z animacją i UICorner
 function ShadowGui:AddTab(config)
