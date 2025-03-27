@@ -78,17 +78,17 @@ local function ShowSplash(parent)
     splashLabel.TextColor3 = Color3.new(1,1,1)
     splashLabel.TextScaled = true
     splashLabel.Font = Enum.Font.GothamBold
+    splashLabel.TextTransparency = 1
 
-    -- Efekt pojawiania się
+    -- Animacja pojawiania się napisu
     Tween(splashLabel, {TextTransparency = 0}, 0.5)
     wait(1.5)
-    Tween(splash, {BackgroundTransparency = 1}, 0.75)
+    Tween(splash, {BackgroundTransparency = 1, TextTransparency = 1}, 0.75)
     wait(0.8)
     splash:Destroy()
 end
 
--- Funkcja wyświetlająca okno z systemem klucza, jeżeli KeySystem = true.
--- Funkcja blokuje działanie i zwraca true po poprawnej walidacji.
+-- Funkcja wyświetlająca okno z systemem klucza (KeySystem)
 local function ShowKeySystem(parent, keySettings)
     local keyPrompt = Instance.new("Frame", parent)
     keyPrompt.Size = UDim2.new(0, 300, 0, 150)
@@ -123,7 +123,9 @@ local function ShowKeySystem(parent, keySettings)
     keyBox.TextColor3 = Color3.new(1,1,1)
     keyBox.Font = Enum.Font.Gotham
     keyBox.TextScaled = true
+    keyBox.ClearTextOnFocus = false
     AddUICorner(keyBox, 6)
+    keyBox:CaptureFocus()  -- Umożliwia automatyczne skupienie kursora
 
     local submit = Instance.new("TextButton", keyPrompt)
     submit.Size = UDim2.new(0, 100, 0, 30)
@@ -149,13 +151,12 @@ local function ShowKeySystem(parent, keySettings)
             wait(0.6)
             keyPrompt:Destroy()
         else
-            -- Opcjonalnie można dodać komunikat o błędzie
             keyBox.Text = ""
             keyBox.PlaceholderText = "Invalid key, try again!"
+            keyBox:CaptureFocus()
         end
     end)
 
-    -- Pętla oczekująca na walidację
     repeat wait() until validated
     return true
 end
@@ -179,7 +180,7 @@ function ShadowGui:CreateWindow(config)
         ShowKeySystem(window, config.KeySettings or {})
     end
 
-    -- Główna ramka interfejsu z animowanym wejściem
+    -- Główna ramka interfejsu – ustawiamy początkową skalę na 0, aby później animować rozciąganie z centrum
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(0, 600, 0, 400)
     frame.Position = UDim2.new(0.5, -300, 0.5, -200)
@@ -193,6 +194,11 @@ function ShadowGui:CreateWindow(config)
         ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 40, 40)),
         ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 30, 30))
     })
+
+    -- Dodaj UIScale i ustaw skalę na 0 (początkowo niewidoczne), potem tween do 1
+    local uiScale = Instance.new("UIScale", frame)
+    uiScale.Scale = 0
+    Tween(uiScale, {Scale = 1}, 0.75, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
     -- Ustawienie przeciągania głównego okna
     MakeDraggable(frame)
