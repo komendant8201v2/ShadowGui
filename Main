@@ -1,4 +1,3 @@
--- ShadowGui Module (ShadowGui.lua)
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -9,7 +8,11 @@ ShadowGui.__index = ShadowGui
 -- FUNKCJE POMOCNICZE --
 ---------------------------
 
--- Tween helper
+local function removeOldGui(name)
+    local old = game.CoreGui:FindFirstChild(name)
+    if old then old:Destroy() end
+end
+
 local function Tween(obj, props, duration, easingStyle, easingDirection)
     duration = duration or 0.5
     easingStyle = easingStyle or Enum.EasingStyle.Quad
@@ -20,13 +23,11 @@ local function Tween(obj, props, duration, easingStyle, easingDirection)
     return tween
 end
 
--- Dodaje UICorner do obiektu
 local function AddUICorner(obj, cornerRadius)
     local uiCorner = Instance.new("UICorner", obj)
     uiCorner.CornerRadius = UDim.new(0, cornerRadius or 8)
 end
 
--- Umożliwia przeciąganie obiektu
 local function MakeDraggable(frame)
     local dragging, dragInput, dragStart, startPos
     local function update(input)
@@ -61,42 +62,48 @@ local function MakeDraggable(frame)
     end)
 end
 
--- Funkcja wyświetlająca ekran powitalny (Splash) z napisem "ShadowGui"
+---------------------------
+-- EFEKTY EKRANOWE --
+---------------------------
+
+-- Splash screen – pojawia się na chwilę, potem znika.
 local function ShowSplash(parent)
-    local splash = Instance.new("Frame", parent)
+    local splash = Instance.new("Frame")
     splash.Size = UDim2.new(1, 0, 1, 0)
     splash.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     splash.BackgroundTransparency = 0
-    splash.ZIndex = 10
+    splash.ZIndex = 100
     AddUICorner(splash, 12)
+    splash.Parent = parent
 
-    local splashLabel = Instance.new("TextLabel", splash)
-    splashLabel.Size = UDim2.new(1, 0, 0, 100)
-    splashLabel.Position = UDim2.new(0, 0, 0.5, -50)
-    splashLabel.BackgroundTransparency = 1
-    splashLabel.Text = "ShadowGui"
-    splashLabel.TextColor3 = Color3.new(1,1,1)
-    splashLabel.TextScaled = true
-    splashLabel.Font = Enum.Font.GothamBold
-    splashLabel.TextTransparency = 1
+    local label = Instance.new("TextLabel", splash)
+    label.Size = UDim2.new(1, 0, 0, 100)
+    label.Position = UDim2.new(0, 0, 0.5, -50)
+    label.BackgroundTransparency = 1
+    label.Text = "ShadowGui"
+    label.TextColor3 = Color3.new(1,1,1)
+    label.TextScaled = true
+    label.Font = Enum.Font.GothamBold
+    label.TextTransparency = 1
+    label.ZIndex = 101
 
-    -- Animacja pojawiania się napisu
-    Tween(splashLabel, {TextTransparency = 0}, 0.5)
+    Tween(label, {TextTransparency = 0}, 0.5)
     wait(1.5)
-    Tween(splash, {BackgroundTransparency = 1, TextTransparency = 1}, 0.75)
+    Tween(splash, {BackgroundTransparency = 1}, 0.75)
     wait(0.8)
     splash:Destroy()
 end
 
--- Funkcja wyświetlająca okno z systemem klucza (KeySystem)
-local function ShowKeySystem(parent, keySettings)
-    local keyPrompt = Instance.new("Frame", parent)
+-- Key prompt – wyświetla okno do wpisania klucza i czeka, aż zostanie wpisany poprawny.
+local function ShowKeyPrompt(parent, keySettings)
+    local keyPrompt = Instance.new("Frame")
     keyPrompt.Size = UDim2.new(0, 300, 0, 150)
     keyPrompt.Position = UDim2.new(0.5, -150, 0.5, -75)
     keyPrompt.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     keyPrompt.BorderSizePixel = 0
-    keyPrompt.ZIndex = 11
+    keyPrompt.ZIndex = 110
     AddUICorner(keyPrompt, 12)
+    keyPrompt.Parent = parent
 
     local title = Instance.new("TextLabel", keyPrompt)
     title.Size = UDim2.new(1, 0, 0, 40)
@@ -125,7 +132,7 @@ local function ShowKeySystem(parent, keySettings)
     keyBox.TextScaled = true
     keyBox.ClearTextOnFocus = false
     AddUICorner(keyBox, 6)
-    keyBox:CaptureFocus()  -- Umożliwia automatyczne skupienie kursora
+    keyBox:CaptureFocus()
 
     local submit = Instance.new("TextButton", keyPrompt)
     submit.Size = UDim2.new(0, 100, 0, 30)
@@ -167,47 +174,52 @@ end
 
 function ShadowGui:CreateWindow(config)
     config = config or {}
-    
-    local window = Instance.new("ScreenGui")
-    window.Name = config.Name or "ShadowGuiWindow"
-    window.Parent = game.CoreGui  -- lub PlayerGui
+    removeOldGui(config.Name or "ShadowGuiWindow")
 
-    -- Wyświetl splash screen
-    ShowSplash(window)
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = config.Name or "ShadowGuiWindow"
+    screenGui.Parent = game.CoreGui
+    screenGui.ResetOnSpawn = false
 
-    -- Jeśli KeySystem = true, wyświetl okno klucza
+    -- Pokaż splash screen
+    ShowSplash(screenGui)
+
+    -- Jeśli włączony KeySystem, pokaż okno klucza
     if config.KeySystem then
-        ShowKeySystem(window, config.KeySettings or {})
+        ShowKeyPrompt(screenGui, config.KeySettings or {})
     end
 
-    -- Główna ramka interfejsu – ustawiamy początkową skalę na 0, aby później animować rozciąganie z centrum
+    -- Tworzymy główną ramkę GUI, ale ukrywamy ją przez skalę ustawioną na 0
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(0, 600, 0, 400)
     frame.Position = UDim2.new(0.5, -300, 0.5, -200)
     frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     frame.BorderSizePixel = 0
-    frame.Parent = window
+    frame.ZIndex = 50
     AddUICorner(frame, 12)
+    frame.Parent = screenGui
 
+    -- Dodajemy gradient (opcjonalnie)
     local gradient = Instance.new("UIGradient", frame)
     gradient.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 40, 40)),
         ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 30, 30))
     })
 
-    -- Dodaj UIScale i ustaw skalę na 0 (początkowo niewidoczne), potem tween do 1
+    -- Dodaj UIScale i ustaw początkową skalę 0, potem tween do 1 (efekt "rozszerzania" z centrum)
     local uiScale = Instance.new("UIScale", frame)
     uiScale.Scale = 0
     Tween(uiScale, {Scale = 1}, 0.75, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
-    -- Ustawienie przeciągania głównego okna
+    -- Umożliwiamy przeciąganie głównej ramki
     MakeDraggable(frame)
 
-    -- Pasek tytułowy z ikoną, gradientem oraz UICorner
+    -- Pasek tytułowy
     local topBar = Instance.new("Frame", frame)
     topBar.Size = UDim2.new(1, 0, 0, 50)
     topBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     topBar.BorderSizePixel = 0
+    topBar.ZIndex = 55
     AddUICorner(topBar, 12)
 
     local topGradient = Instance.new("UIGradient", topBar)
@@ -226,6 +238,7 @@ function ShadowGui:CreateWindow(config)
             icon.Image = config.Icon
         end
         icon.BackgroundTransparency = 1
+        icon.ZIndex = 56
         AddUICorner(icon, 8)
     end
 
@@ -237,28 +250,32 @@ function ShadowGui:CreateWindow(config)
     titleLabel.TextColor3 = Color3.new(1,1,1)
     titleLabel.TextScaled = true
     titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.ZIndex = 56
 
     -- Kontenery na zakładki i zawartość
     local tabContainer = Instance.new("Frame", frame)
     tabContainer.Size = UDim2.new(1, 0, 0, 30)
     tabContainer.Position = UDim2.new(0, 0, 0, 50)
     tabContainer.BackgroundTransparency = 1
+    tabContainer.ZIndex = 55
 
     local contentContainer = Instance.new("Frame", frame)
     contentContainer.Size = UDim2.new(1, 0, 1, -80)
     contentContainer.Position = UDim2.new(0, 0, 0, 80)
     contentContainer.BackgroundTransparency = 1
+    contentContainer.ZIndex = 55
 
-    -- Funkcjonalność powiadomień z animacją slide-in/out i UICorner
+    -- Powiadomienia
     local Notifications = {}
     function Notifications:Send(title, text, duration)
         duration = duration or 5
-        local notification = Instance.new("Frame", window)
+        local notification = Instance.new("Frame", screenGui)
         notification.Size = UDim2.new(0, 300, 0, 50)
         notification.Position = UDim2.new(1, 310, 0, 10)
         notification.BackgroundColor3 = Color3.fromRGB(50,50,50)
         notification.BackgroundTransparency = 0.2
         notification.BorderSizePixel = 0
+        notification.ZIndex = 200
         AddUICorner(notification, 8)
 
         local nTitle = Instance.new("TextLabel", notification)
@@ -268,6 +285,7 @@ function ShadowGui:CreateWindow(config)
         nTitle.TextColor3 = Color3.new(1,1,1)
         nTitle.TextScaled = true
         nTitle.Font = Enum.Font.GothamBold
+        nTitle.ZIndex = 201
 
         local nText = Instance.new("TextLabel", notification)
         nText.Size = UDim2.new(1,0,0,25)
@@ -277,6 +295,7 @@ function ShadowGui:CreateWindow(config)
         nText.TextColor3 = Color3.new(1,1,1)
         nText.TextScaled = true
         nText.Font = Enum.Font.Gotham
+        nText.ZIndex = 201
 
         Tween(notification, {Position = UDim2.new(1, -310, 0, 10)}, 0.5)
 
@@ -288,7 +307,7 @@ function ShadowGui:CreateWindow(config)
     end
 
     local guiObject = {
-        Window = window,
+        Window = screenGui,
         Frame = frame,
         TabContainer = tabContainer,
         ContentContainer = contentContainer,
@@ -306,7 +325,6 @@ end
 -- FUNKCJE ELEMENTÓW --
 ---------------------------
 
--- Dodawanie zakładki (Tab) z animacją i UICorner
 function ShadowGui:AddTab(config)
     config = config or {}
     local tabName = config.Name or "Tab"
@@ -319,6 +337,7 @@ function ShadowGui:AddTab(config)
     tabButton.Font = Enum.Font.Gotham
     tabButton.TextSize = 20
     tabButton.BorderSizePixel = 0
+    tabButton.ZIndex = 60
     tabButton.Parent = self.TabContainer
     AddUICorner(tabButton, 6)
 
@@ -331,6 +350,7 @@ function ShadowGui:AddTab(config)
     tabContent.Size = UDim2.new(1, 0, 1, 0)
     tabContent.BackgroundTransparency = 1
     tabContent.Visible = false
+    tabContent.ZIndex = 60
     AddUICorner(tabContent, 8)
 
     local tabData = {
@@ -364,7 +384,6 @@ function ShadowGui:AddTab(config)
     return tabData
 end
 
--- Dodawanie przycisku do zakładki z animacją i UICorner
 function ShadowGui:AddButton(tabData, config, callback)
     config = config or {}
     local button = Instance.new("TextButton")
@@ -376,6 +395,7 @@ function ShadowGui:AddButton(tabData, config, callback)
     button.Font = Enum.Font.Gotham
     button.TextSize = 20
     button.BorderSizePixel = 0
+    button.ZIndex = 65
     button.Parent = tabData.Content
     AddUICorner(button, 6)
 
@@ -390,7 +410,6 @@ function ShadowGui:AddButton(tabData, config, callback)
     table.insert(tabData.Elements, button)
 end
 
--- Dodawanie przełącznika (Toggle) do zakładki z animacją i UICorner
 function ShadowGui:AddToggle(tabData, config, callback)
     config = config or {}
     local toggle = Instance.new("TextButton")
@@ -403,6 +422,7 @@ function ShadowGui:AddToggle(tabData, config, callback)
     toggle.Font = Enum.Font.Gotham
     toggle.TextSize = 20
     toggle.BorderSizePixel = 0
+    toggle.ZIndex = 65
     toggle.Parent = tabData.Content
     AddUICorner(toggle, 6)
 
