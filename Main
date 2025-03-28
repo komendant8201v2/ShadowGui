@@ -1,18 +1,9 @@
 local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local ShadowGui = {}
 ShadowGui.__index = ShadowGui
 
----------------------------
--- FUNKCJE POMOCNICZE --
----------------------------
-
-local function removeOldGui(name)
-    local old = game.CoreGui:FindFirstChild(name)
-    if old then old:Destroy() end
-end
-
+-- Pomocnicza funkcja Tween
 local function Tween(obj, props, duration, easingStyle, easingDirection)
     duration = duration or 0.5
     easingStyle = easingStyle or Enum.EasingStyle.Quad
@@ -23,50 +14,101 @@ local function Tween(obj, props, duration, easingStyle, easingDirection)
     return tween
 end
 
+-- Pomocnicza funkcja dodająca UICorner
 local function AddUICorner(obj, cornerRadius)
     local uiCorner = Instance.new("UICorner", obj)
     uiCorner.CornerRadius = UDim.new(0, cornerRadius or 8)
 end
 
-local function MakeDraggable(frame)
-    local dragging, dragInput, dragStart, startPos
-    local function update(input)
-        local delta = input.Position - dragStart
-        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
+-- Usuń stare GUI o tej samej nazwie
+local function removeOldGui(name)
+    local old = game.CoreGui:FindFirstChild(name)
+    if old then old:Destroy() end
+end
 
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = frame.Position
+-------------------------------------
+-- Funkcja wyświetlająca okno klucza
+-------------------------------------
+local function ShowKeyPrompt(parent, keySettings)
+    local keyPrompt = Instance.new("Frame")
+    keyPrompt.Size = UDim2.new(0, 300, 0, 150)
+    keyPrompt.Position = UDim2.new(0.5, -150, 0.5, -75)
+    keyPrompt.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    keyPrompt.BorderSizePixel = 0
+    keyPrompt.ZIndex = 110
+    AddUICorner(keyPrompt, 12)
+    keyPrompt.Parent = parent
 
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 40)
+    title.BackgroundTransparency = 1
+    title.Text = keySettings.Title or "Key System"
+    title.TextColor3 = Color3.new(1, 1, 1)
+    title.Font = Enum.Font.GothamBold
+    title.TextScaled = true
+    title.Parent = keyPrompt
+
+    local subtitle = Instance.new("TextLabel")
+    subtitle.Size = UDim2.new(1, 0, 0, 20)
+    subtitle.Position = UDim2.new(0, 0, 0, 40)
+    subtitle.BackgroundTransparency = 1
+    subtitle.Text = keySettings.Subtitle or "Enter your key"
+    subtitle.TextColor3 = Color3.new(1, 1, 1)
+    subtitle.Font = Enum.Font.Gotham
+    subtitle.TextScaled = true
+    subtitle.Parent = keyPrompt
+
+    local keyBox = Instance.new("TextBox")
+    keyBox.Size = UDim2.new(0, 200, 0, 30)
+    keyBox.Position = UDim2.new(0.5, -100, 0, 70)
+    keyBox.PlaceholderText = "Enter key..."
+    keyBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    keyBox.TextColor3 = Color3.new(1, 1, 1)
+    keyBox.Font = Enum.Font.Gotham
+    keyBox.TextScaled = true
+    keyBox.ClearTextOnFocus = false
+    AddUICorner(keyBox, 6)
+    keyBox.Parent = keyPrompt
+    keyBox:CaptureFocus()
+
+    local submit = Instance.new("TextButton")
+    submit.Size = UDim2.new(0, 100, 0, 30)
+    submit.Position = UDim2.new(0.5, -50, 0, 110)
+    submit.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    submit.Text = "Submit"
+    submit.TextColor3 = Color3.new(1, 1, 1)
+    submit.Font = Enum.Font.GothamBold
+    submit.TextScaled = true
+    AddUICorner(submit, 6)
+    submit.Parent = keyPrompt
+
+    local validated = false
+    submit.MouseButton1Click:Connect(function()
+        local inputKey = keyBox.Text or ""
+        for _, validKey in ipairs(keySettings.Key or {}) do
+            if inputKey == validKey then
+                validated = true
+                break
+            end
+        end
+        if validated then
+            Tween(keyPrompt, {BackgroundTransparency = 1}, 0.5)
+            wait(0.6)
+            keyPrompt:Destroy()
+        else
+            keyBox.Text = ""
+            keyBox.PlaceholderText = "Invalid key, try again!"
+            keyBox:CaptureFocus()
         end
     end)
 
-    frame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-
-    RunService.RenderStepped:Connect(function()
-        if dragging and dragInput then
-            update(dragInput)
-        end
-    end)
+    repeat wait() until validated
+    return true
 end
 
 ---------------------------
--- EFEKTY EKRANOWE --
+-- FUNKCJA SPLASH SCREEN
 ---------------------------
-
--- Splash screen – pojawia się na chwilę, potem znika.
 local function ShowSplash(parent)
     local splash = Instance.new("Frame")
     splash.Size = UDim2.new(1, 0, 1, 0)
@@ -94,96 +136,9 @@ local function ShowSplash(parent)
     splash:Destroy()
 end
 
--- Key prompt – wyświetla okno do wpisania klucza i czeka, aż zostanie wpisany poprawny.
-local function ShowKeyPrompt(parent, keySettings)
-    -- Utwórz nowy frame jako okno klucza i ustaw go jako dziecko głównego ScreenGui
-    local keyPrompt = Instance.new("Frame")
-    keyPrompt.Size = UDim2.new(0, 300, 0, 150)
-    keyPrompt.Position = UDim2.new(0.5, -150, 0.5, -75)
-    keyPrompt.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    keyPrompt.BorderSizePixel = 0
-    keyPrompt.ZIndex = 110
-    -- Dodaj zaokrąglenia
-    local uiCorner = Instance.new("UICorner")
-    uiCorner.CornerRadius = UDim.new(0, 12)
-    uiCorner.Parent = keyPrompt
-    keyPrompt.Parent = parent
-
-    -- Tytuł okna
-    local title = Instance.new("TextLabel", keyPrompt)
-    title.Size = UDim2.new(1, 0, 0, 40)
-    title.BackgroundTransparency = 1
-    title.Text = keySettings.Title or "Key System"
-    title.TextColor3 = Color3.new(1, 1, 1)
-    title.Font = Enum.Font.GothamBold
-    title.TextScaled = true
-
-    -- Podtytuł
-    local subtitle = Instance.new("TextLabel", keyPrompt)
-    subtitle.Size = UDim2.new(1, 0, 0, 20)
-    subtitle.Position = UDim2.new(0, 0, 0, 40)
-    subtitle.BackgroundTransparency = 1
-    subtitle.Text = keySettings.Subtitle or "Enter your key"
-    subtitle.TextColor3 = Color3.new(1, 1, 1)
-    subtitle.Font = Enum.Font.Gotham
-    subtitle.TextScaled = true
-
-    -- TextBox do wpisywania klucza
-    local keyBox = Instance.new("TextBox", keyPrompt)
-    keyBox.Size = UDim2.new(0, 200, 0, 30)
-    keyBox.Position = UDim2.new(0.5, -100, 0, 70)
-    keyBox.PlaceholderText = "Enter key..."
-    keyBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    keyBox.TextColor3 = Color3.new(1, 1, 1)
-    keyBox.Font = Enum.Font.Gotham
-    keyBox.TextScaled = true
-    keyBox.ClearTextOnFocus = false
-    local keyBoxCorner = Instance.new("UICorner")
-    keyBoxCorner.CornerRadius = UDim.new(0, 6)
-    keyBoxCorner.Parent = keyBox
-    keyBox:CaptureFocus()  -- automatycznie ustaw focus
-
-    -- Przycisk do zatwierdzania
-    local submit = Instance.new("TextButton", keyPrompt)
-    submit.Size = UDim2.new(0, 100, 0, 30)
-    submit.Position = UDim2.new(0.5, -50, 0, 110)
-    submit.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
-    submit.Text = "Submit"
-    submit.TextColor3 = Color3.new(1, 1, 1)
-    submit.Font = Enum.Font.GothamBold
-    submit.TextScaled = true
-    local submitCorner = Instance.new("UICorner")
-    submitCorner.CornerRadius = UDim.new(0, 6)
-    submitCorner.Parent = submit
-
-    local validated = false
-    submit.MouseButton1Click:Connect(function()
-        local inputKey = keyBox.Text or ""
-        for _, validKey in ipairs(keySettings.Key or {}) do
-            if inputKey == validKey then
-                validated = true
-                break
-            end
-        end
-        if validated then
-            Tween(keyPrompt, {BackgroundTransparency = 1}, 0.5)
-            wait(0.6)
-            keyPrompt:Destroy()
-        else
-            keyBox.Text = ""
-            keyBox.PlaceholderText = "Invalid key, try again!"
-            keyBox:CaptureFocus()
-        end
-    end)
-
-    repeat wait() until validated
-    return true
-end
-
 ---------------------------
--- GŁÓWNA FUNKCJA GUI --
+-- GŁÓWNA FUNKCJA GUI
 ---------------------------
-
 function ShadowGui:CreateWindow(config)
     config = config or {}
     removeOldGui(config.Name or "ShadowGuiWindow")
@@ -193,15 +148,15 @@ function ShadowGui:CreateWindow(config)
     screenGui.Parent = game.CoreGui
     screenGui.ResetOnSpawn = false
 
-    -- Pokaż splash screen
+    -- Splash screen
     ShowSplash(screenGui)
 
-    -- Jeśli włączony KeySystem, pokaż okno klucza
+    -- Key system: jeśli włączony, wyświetl okno klucza
     if config.KeySystem then
         ShowKeyPrompt(screenGui, config.KeySettings or {})
     end
 
-    -- Tworzymy główną ramkę GUI, ale ukrywamy ją przez skalę ustawioną na 0
+    -- Główna ramka GUI – stały rozmiar 600x400
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(0, 600, 0, 400)
     frame.Position = UDim2.new(0.5, -300, 0.5, -200)
@@ -211,21 +166,6 @@ function ShadowGui:CreateWindow(config)
     AddUICorner(frame, 12)
     frame.Parent = screenGui
 
-    -- Dodajemy gradient (opcjonalnie)
-    local gradient = Instance.new("UIGradient", frame)
-    gradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 40, 40)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(30, 30, 30))
-    })
-
-    -- Dodaj UIScale i ustaw początkową skalę 0, potem tween do 1 (efekt "rozszerzania" z centrum)
-    local uiScale = Instance.new("UIScale", frame)
-    uiScale.Scale = 0
-    Tween(uiScale, {Scale = 1}, 0.75, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-
-    -- Umożliwiamy przeciąganie głównej ramki
-    MakeDraggable(frame)
-
     -- Pasek tytułowy
     local topBar = Instance.new("Frame", frame)
     topBar.Size = UDim2.new(1, 0, 0, 50)
@@ -234,29 +174,8 @@ function ShadowGui:CreateWindow(config)
     topBar.ZIndex = 55
     AddUICorner(topBar, 12)
 
-    local topGradient = Instance.new("UIGradient", topBar)
-    topGradient.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 60, 60)),
-        ColorSequenceKeypoint.new(1, Color3.fromRGB(50, 50, 50))
-    })
-
-    if config.Icon and config.Icon ~= 0 then
-        local icon = Instance.new("ImageLabel", topBar)
-        icon.Size = UDim2.new(0, 40, 0, 40)
-        icon.Position = UDim2.new(0, 5, 0, 5)
-        if type(config.Icon) == "number" then
-            icon.Image = "rbxassetid://"..tostring(config.Icon)
-        else
-            icon.Image = config.Icon
-        end
-        icon.BackgroundTransparency = 1
-        icon.ZIndex = 56
-        AddUICorner(icon, 8)
-    end
-
     local titleLabel = Instance.new("TextLabel", topBar)
-    titleLabel.Size = config.Icon and (config.Icon ~= 0 and UDim2.new(1, -50, 1, 0) or UDim2.new(1, 0, 1, 0)) or UDim2.new(1, 0, 1, 0)
-    titleLabel.Position = config.Icon and (config.Icon ~= 0 and UDim2.new(0, 50, 0, 0) or UDim2.new(0, 0, 0, 0)) or UDim2.new(0,0,0,0)
+    titleLabel.Size = UDim2.new(1, 0, 1, 0)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = config.Name or "ShadowGui"
     titleLabel.TextColor3 = Color3.new(1,1,1)
@@ -277,7 +196,6 @@ function ShadowGui:CreateWindow(config)
     contentContainer.BackgroundTransparency = 1
     contentContainer.ZIndex = 55
 
-    -- Powiadomienia
     local Notifications = {}
     function Notifications:Send(title, text, duration)
         duration = duration or 5
@@ -291,7 +209,7 @@ function ShadowGui:CreateWindow(config)
         AddUICorner(notification, 8)
 
         local nTitle = Instance.new("TextLabel", notification)
-        nTitle.Size = UDim2.new(1,0,0,25)
+        nTitle.Size = UDim2.new(1, 0, 0, 25)
         nTitle.BackgroundTransparency = 1
         nTitle.Text = title
         nTitle.TextColor3 = Color3.new(1,1,1)
@@ -300,8 +218,8 @@ function ShadowGui:CreateWindow(config)
         nTitle.ZIndex = 201
 
         local nText = Instance.new("TextLabel", notification)
-        nText.Size = UDim2.new(1,0,0,25)
-        nText.Position = UDim2.new(0,0,0,25)
+        nText.Size = UDim2.new(1, 0, 0, 25)
+        nText.Position = UDim2.new(0, 0, 0, 25)
         nText.BackgroundTransparency = 1
         nText.Text = text
         nText.TextColor3 = Color3.new(1,1,1)
@@ -310,7 +228,6 @@ function ShadowGui:CreateWindow(config)
         nText.ZIndex = 201
 
         Tween(notification, {Position = UDim2.new(1, -310, 0, 10)}, 0.5)
-
         delay(duration, function()
             Tween(notification, {Position = UDim2.new(1, 310, 0, 10)}, 0.5)
             wait(0.6)
@@ -326,7 +243,7 @@ function ShadowGui:CreateWindow(config)
         Notifications = Notifications,
         Tabs = {},
         ActiveTab = nil,
-        TabButtonWidth = 100,  -- domyślna szerokość przycisku zakładki
+        TabButtonWidth = 100,
         Config = config
     }
     setmetatable(guiObject, ShadowGui)
@@ -336,7 +253,6 @@ end
 ---------------------------
 -- FUNKCJE ELEMENTÓW --
 ---------------------------
-
 function ShadowGui:AddTab(config)
     config = config or {}
     local tabName = config.Name or "Tab"
