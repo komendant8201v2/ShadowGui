@@ -96,53 +96,65 @@ end
 
 -- Key prompt – wyświetla okno do wpisania klucza i czeka, aż zostanie wpisany poprawny.
 local function ShowKeyPrompt(parent, keySettings)
+    -- Utwórz nowy frame jako okno klucza i ustaw go jako dziecko głównego ScreenGui
     local keyPrompt = Instance.new("Frame")
     keyPrompt.Size = UDim2.new(0, 300, 0, 150)
     keyPrompt.Position = UDim2.new(0.5, -150, 0.5, -75)
     keyPrompt.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     keyPrompt.BorderSizePixel = 0
     keyPrompt.ZIndex = 110
-    AddUICorner(keyPrompt, 12)
+    -- Dodaj zaokrąglenia
+    local uiCorner = Instance.new("UICorner")
+    uiCorner.CornerRadius = UDim.new(0, 12)
+    uiCorner.Parent = keyPrompt
     keyPrompt.Parent = parent
 
+    -- Tytuł okna
     local title = Instance.new("TextLabel", keyPrompt)
     title.Size = UDim2.new(1, 0, 0, 40)
     title.BackgroundTransparency = 1
     title.Text = keySettings.Title or "Key System"
-    title.TextColor3 = Color3.new(1,1,1)
+    title.TextColor3 = Color3.new(1, 1, 1)
     title.Font = Enum.Font.GothamBold
     title.TextScaled = true
 
+    -- Podtytuł
     local subtitle = Instance.new("TextLabel", keyPrompt)
     subtitle.Size = UDim2.new(1, 0, 0, 20)
     subtitle.Position = UDim2.new(0, 0, 0, 40)
     subtitle.BackgroundTransparency = 1
     subtitle.Text = keySettings.Subtitle or "Enter your key"
-    subtitle.TextColor3 = Color3.new(1,1,1)
+    subtitle.TextColor3 = Color3.new(1, 1, 1)
     subtitle.Font = Enum.Font.Gotham
     subtitle.TextScaled = true
 
+    -- TextBox do wpisywania klucza
     local keyBox = Instance.new("TextBox", keyPrompt)
     keyBox.Size = UDim2.new(0, 200, 0, 30)
     keyBox.Position = UDim2.new(0.5, -100, 0, 70)
     keyBox.PlaceholderText = "Enter key..."
     keyBox.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    keyBox.TextColor3 = Color3.new(1,1,1)
+    keyBox.TextColor3 = Color3.new(1, 1, 1)
     keyBox.Font = Enum.Font.Gotham
     keyBox.TextScaled = true
     keyBox.ClearTextOnFocus = false
-    AddUICorner(keyBox, 6)
-    keyBox:CaptureFocus()
+    local keyBoxCorner = Instance.new("UICorner")
+    keyBoxCorner.CornerRadius = UDim.new(0, 6)
+    keyBoxCorner.Parent = keyBox
+    keyBox:CaptureFocus()  -- automatycznie ustaw focus
 
+    -- Przycisk do zatwierdzania
     local submit = Instance.new("TextButton", keyPrompt)
     submit.Size = UDim2.new(0, 100, 0, 30)
     submit.Position = UDim2.new(0.5, -50, 0, 110)
     submit.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
     submit.Text = "Submit"
-    submit.TextColor3 = Color3.new(1,1,1)
+    submit.TextColor3 = Color3.new(1, 1, 1)
     submit.Font = Enum.Font.GothamBold
     submit.TextScaled = true
-    AddUICorner(submit, 6)
+    local submitCorner = Instance.new("UICorner")
+    submitCorner.CornerRadius = UDim.new(0, 6)
+    submitCorner.Parent = submit
 
     local validated = false
     submit.MouseButton1Click:Connect(function()
